@@ -230,128 +230,6 @@ static void ShowDemoWindowPopups();
 static void ShowDemoWindowColumns();
 static void ShowDemoWindowMisc();
 
-// Generate a random convex shape (based on algorithm from http://cglab.ca/~sander/misc/ConvexGeneration/convex.html)
-void GenerateRandomPolygon(size_t max_poly_points, ImVec2* poly_points, const ImVec2& shape_center, float shape_size)
-{
-    // Generate two lists of numbers
-    float* x_points = (float*)alloca(max_poly_points * sizeof(float));
-    float* y_points = (float*)alloca(max_poly_points * sizeof(float));
-
-    for (size_t i = 0; i < max_poly_points; i++)
-    {
-        x_points[i] = (float)rand() / (float)RAND_MAX;
-        y_points[i] = (float)rand() / (float)RAND_MAX;
-    }
-
-    // Sort
-    qsort(x_points, max_poly_points, sizeof(float), [](const void* a, const void* b) { if (*(const float*)a < *(const float*)b) return -1; else if (*(const float*)a > * (const float*)b) return 1; else return 0; });
-    qsort(y_points, max_poly_points, sizeof(float), [](const void* a, const void* b) { if (*(const float*)a < *(const float*)b) return -1; else if (*(const float*)a > * (const float*)b) return 1; else return 0; });
-
-    // Get the extremities
-    float min_x = x_points[0];
-    float max_x = x_points[max_poly_points - 1];
-    float min_y = y_points[0];
-    float max_y = y_points[max_poly_points - 1];
-
-    // Split into pairs of chains, one for each "side" of the shape
-
-    float* x_chain = (float*)alloca(max_poly_points * sizeof(float));
-    float* y_chain = (float*)alloca(max_poly_points * sizeof(float));
-
-    float x_chain_current_a = min_x;
-    float x_chain_current_b = min_x;
-    float y_chain_current_a = min_y;
-    float y_chain_current_b = min_y;
-
-    for (size_t i = 1; i < (max_poly_points - 1); i++)
-    {
-        if ((rand() % 100) < 50)
-        {
-            x_chain[i - 1] = x_points[i] - x_chain_current_a;
-            x_chain_current_a = x_points[i];
-            y_chain[i - 1] = y_points[i] - y_chain_current_a;
-            y_chain_current_a = y_points[i];
-        }
-        else
-        {
-            x_chain[i - 1] = x_chain_current_b - x_points[i];
-            x_chain_current_b = x_points[i];
-            y_chain[i - 1] = y_chain_current_b - y_points[i];
-            y_chain_current_b = y_points[i];
-        }
-    }
-
-    x_chain[max_poly_points - 2] = max_x - x_chain_current_a;
-    x_chain[max_poly_points - 1] = x_chain_current_b - max_x;
-    y_chain[max_poly_points - 2] = max_y - y_chain_current_a;
-    y_chain[max_poly_points - 1] = y_chain_current_b - max_y;
-
-    // Build shuffle list
-    int* shuffle_list = (int*)alloca(max_poly_points * sizeof(int));
-    for (size_t i = 0; i < max_poly_points; i++)
-    {
-        shuffle_list[i] = (int)i;
-    }
-
-    for (size_t i = 0; i < max_poly_points * 2; i++)
-    {
-        int index_a = rand() % (int)max_poly_points;
-        int index_b = rand() % (int)max_poly_points;
-        int temp = shuffle_list[index_a];
-        shuffle_list[index_a] = shuffle_list[index_b];
-        shuffle_list[index_b] = temp;
-    }
-
-    // Generate random vectors from the X/Y chains
-    for (size_t i = 0; i < max_poly_points; i++)
-    {
-        poly_points[i] = ImVec2(x_chain[i], y_chain[shuffle_list[i]]);
-    }
-
-    // Sort by angle of vector
-    qsort(poly_points, max_poly_points, sizeof(ImVec2), [](const void* a, const void* b)
-        {
-            float angle_a = atan2f(((const ImVec2*)a)->y, ((const ImVec2*)a)->x);
-            float angle_b = atan2f(((const ImVec2*)b)->y, ((const ImVec2*)b)->x);
-            if (angle_a < angle_b)
-                return -1;
-            else if (angle_a > angle_b)
-                return 1;
-            else
-                return 0;
-        });
-
-    // Convert into absolute co-ordinates
-    ImVec2 current_pos(0.0f, 0.0f);
-    ImVec2 center_pos(0.0f, 0.0f);
-    ImVec2 min_pos(FLT_MAX, FLT_MAX);
-    ImVec2 max_pos(FLT_MIN, FLT_MIN);
-    for (size_t i = 0; i < max_poly_points; i++)
-    {
-        ImVec2 new_pos(current_pos.x + poly_points[i].x, current_pos.y + poly_points[i].y);
-        poly_points[i] = current_pos;
-        center_pos = ImVec2(center_pos.x + current_pos.x, center_pos.y + current_pos.y);
-        min_pos.x = IM_MIN(min_pos.x, current_pos.x);
-        min_pos.y = IM_MIN(min_pos.y, current_pos.y);
-        max_pos.x = IM_MAX(max_pos.x, current_pos.x);
-        max_pos.y = IM_MAX(max_pos.y, current_pos.y);
-        current_pos = new_pos;
-    }
-
-    // Re-scale and center
-    center_pos = ImVec2(center_pos.x / (float)max_poly_points, center_pos.y / (float)max_poly_points);
-
-    ImVec2 size = ImVec2(max_pos.x - min_pos.x, max_pos.y - min_pos.y);
-
-    float scale = shape_size / IM_MAX(size.x, size.y);
-
-    for (size_t i = 0; i < max_poly_points; i++)
-    {
-        poly_points[i].x = shape_center.x + ((poly_points[i].x - center_pos.x) * scale);
-        poly_points[i].y = shape_center.y + ((poly_points[i].y - center_pos.y) * scale);
-    }
-}
-
 // Demonstrate most Dear ImGui features (this is big function!)
 // You may execute this function to experiment with the UI and understand what it does.
 // You may then search for keywords in the code when you are interested by a specific feature.
@@ -387,105 +265,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     if (show_app_simple_overlay)      ShowExampleAppSimpleOverlay(&show_app_simple_overlay);
     if (show_app_window_titles)       ShowExampleAppWindowTitles(&show_app_window_titles);
     if (show_app_custom_rendering)    ShowExampleAppCustomRendering(&show_app_custom_rendering);
-
-    // Hacky shadow test
-
-    {
-        ImGui::Begin("Shadow test");
-
-        static ImVec2 shadow_offset(0.0f, 0.0f);
-        static float shadow_thickness = 32.0f;
-        static ImVec4 col(1.0f, 0.0f, 0.0f, 1.0f);
-        static ImVec4 shadow_col(0.0f, 0.0f, 0.0f, 1.0f);
-        static int segments = 32;
-        static bool fill = false;
-        static bool draw_shapes = true;
-        static bool wireframe = false;
-        static bool shadow = true;
-        static bool aa = false;
-        static int poly_seed = 1256;// 1234;
-
-        ImGui::SliderFloat2("Offset", (float*)&shadow_offset, -32.0f, 32.0f);
-        ImGui::DragFloat("Thickness", &shadow_thickness, 0.5f, 0.0f, 100.0f);
-        ImGui::SliderInt("Segments", &segments, 3, 64);
-        ImGui::ColorEdit4("Colour", (float*)&col);
-        ImGui::ColorEdit4("Shadow colour", (float*)&shadow_col);
-        ImGui::InputInt("Poly seed", &poly_seed);
-        ImGui::Checkbox("Shapes", &draw_shapes);
-        ImGui::SameLine();
-        ImGui::Checkbox("Wireframe shapes", &wireframe);
-        ImGui::SameLine();
-        ImGui::Checkbox("Shadow", &shadow);
-        ImGui::SameLine();
-        ImGui::Checkbox("Fill shadow", &fill);
-        ImGui::SameLine();
-        ImGui::Checkbox("AA", &aa);
-
-        ImVec2 pos = ImGui::GetCursorScreenPos();
-
-        ImDrawList* draw_list = ImGui::GetWindowDrawList();
-
-        ImDrawListFlags old_flags = draw_list->Flags;
-
-        if (aa)
-            draw_list->Flags |= ~ImDrawListFlags_AntiAliasedFill;
-        else
-            draw_list->Flags &= ~ImDrawListFlags_AntiAliasedFill;
-
-        // White background
-        draw_list->AddRectFilled(ImVec2(pos.x, pos.y), ImVec2(pos.x + 10000.0f, pos.y + 128.0f), IM_COL32(255, 255, 255, 255));
-
-        // Draw circle
-        if (shadow)
-        {
-            if (fill)
-                draw_list->AddShadowCircleFilled(ImVec2(pos.x + 128.0f, pos.y + 64.0f), 40.0f, shadow_thickness, shadow_offset, ImGui::GetColorU32(shadow_col), segments);
-            else
-                draw_list->AddShadowCircle(ImVec2(pos.x + 128.0f, pos.y + 64.0f), 40.0f, shadow_thickness, shadow_offset, ImGui::GetColorU32(shadow_col), segments);
-        }
-
-        if (draw_shapes)
-        {
-            if (wireframe)
-                draw_list->AddCircle(ImVec2(pos.x + 128.0f, pos.y + 64.0f), 40.0f, ImGui::GetColorU32(col), segments);
-            else
-                draw_list->AddCircleFilled(ImVec2(pos.x + 128.0f, pos.y + 64.0f), 40.0f, ImGui::GetColorU32(col), segments);
-        }
-
-        // Draw convex shape
-
-        // Generate a random convex shape
-        const size_t max_poly_points = (rand() % 16) + 3;
-        const ImVec2 shape_center(pos.x + 256.0f, pos.y + 64.0f);
-        const float shape_size = 64.0f;
-        ImVec2* poly_points = (ImVec2*)alloca(max_poly_points * sizeof(ImVec2));
-        srand((unsigned int)poly_seed);
-        GenerateRandomPolygon(max_poly_points, poly_points, shape_center, shape_size);
-
-        if (shadow)
-        {
-            if (fill)
-                draw_list->AddShadowConvexPolyFilled(poly_points, (int)max_poly_points, shadow_thickness, shadow_offset, ImGui::GetColorU32(shadow_col));
-            else
-                draw_list->AddShadowConvexPoly(poly_points, (int)max_poly_points, shadow_thickness, shadow_offset, ImGui::GetColorU32(shadow_col));
-        }
-
-        if (draw_shapes)
-        {
-            if (wireframe)
-                draw_list->AddPolyline(poly_points, (int)max_poly_points, ImGui::GetColorU32(col), true, 1.0f);
-            else
-                draw_list->AddConvexPolyFilled(poly_points, (int)max_poly_points, ImGui::GetColorU32(col));
-        }
-
-        ImGui::SetCursorScreenPos(ImVec2(pos.x, pos.y + 160.0f));
-
-        ImGui::ImageButton(ImGui::GetIO().Fonts->TexID, ImVec2((float)ImGui::GetIO().Fonts->TexWidth, (float)ImGui::GetIO().Fonts->TexHeight));
-
-        draw_list->Flags = old_flags;
-
-        ImGui::End();
-    }
+    
     // Dear ImGui Apps (accessible from the "Tools" menu)
     static bool show_app_metrics = false;
     static bool show_app_style_editor = false;
@@ -5280,45 +5060,178 @@ static void ShowExampleAppCustomRendering(bool* p_open)
         if (ImGui::BeginTabItem("Shadows"))
         {
             static float shadow_thickness = 40.0f;
-            static bool shadow_filled = false;
             static ImVec4 shadow_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
-            static ImVec4 shape_color = ImVec4(0.9f, 0.0f, 0.0f, 1.0f);
+            static bool shadow_filled = false;
+            static ImVec4 shape_color = ImVec4(0.9f, 0.6f, 0.3f, 1.0f);
             static float shape_rounding = 0.0f;
-            static ImVec4 bg_color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+            static ImVec2 shadow_offset(0.0f, 0.0f);
+            static ImVec4 background_color = ImVec4(0.5f, 0.5f, 0.7f, 1.0f);
+            static bool wireframe = false;
+            static bool aa = true;
+            static int poly_shape_index = 0;
             ImGui::Checkbox("Shadow filled", &shadow_filled);
             ImGui::SameLine();
             HelpMarker("This will fill the section behind the shape to shadow. It's often unnecessary and wasteful but provided for consistency.");
+            ImGui::Checkbox("Wireframe shapes", &wireframe);
+            ImGui::SameLine();
+            HelpMarker("This draws the shapes in wireframe so you can see the shadow underneath.");
+            ImGui::Checkbox("Anti-aliasing", &aa);
 
             ImGui::DragFloat("Shadow Thickness", &shadow_thickness, 1.0f, 0.0f, 100.0f, "%.02f");
+            ImGui::SliderFloat2("Offset", (float*)&shadow_offset, -32.0f, 32.0f);
+            ImGui::SameLine();
+            HelpMarker("Note that currently circles/convex shapes do not support non-zero offsets for unfilled shadows.");
+            ImGui::ColorEdit4("Background Color", &background_color.x);
             ImGui::ColorEdit4("Shadow Color", &shadow_color.x);
             ImGui::ColorEdit4("Shape Color", &shape_color.x);
             ImGui::DragFloat("Shape Rounding", &shape_rounding, 1.0f, 0.0f, 20.0f, "%.02f");
-            ImGui::ColorEdit4("Background Color", &bg_color.x);
+            ImGui::Combo("Convex shape", &poly_shape_index, "Shape 1\0Shape 2\0Shape 3\0Shape 4\0Shape 4 (winding reversed)");
 
+            ImDrawListFlags old_flags = draw_list->Flags;
+
+            if (aa)
+                draw_list->Flags |= ~ImDrawListFlags_AntiAliasedFill;
+            else
+                draw_list->Flags &= ~ImDrawListFlags_AntiAliasedFill;            
+
+            // Fill a strip of background
+            draw_list->AddRectFilled(ImVec2(ImGui::GetCursorScreenPos().x, ImGui::GetCursorScreenPos().y), ImVec2(ImGui::GetCursorScreenPos().x + ImGui::GetWindowContentRegionMax().x, ImGui::GetCursorScreenPos().y + 200.0f), ImGui::GetColorU32(background_color));
+
+            // Rectangle
             {
                 ImVec2 p = ImGui::GetCursorScreenPos();
                 ImVec2 r1(p.x + 50.0f, p.y + 50.0f);
                 ImVec2 r2(p.x + 150.0f, p.y + 150.0f);
-                draw_list->AddRectFilled(p, ImVec2(p.x + 200.0f, p.y + 200.0f), ImGui::GetColorU32(bg_color));
                 if (shadow_filled)
-                    draw_list->AddShadowRectFilled(r1, r2, shadow_thickness, ImVec2(0.0f, 0.0f), ImGui::GetColorU32(shadow_color));
+                    draw_list->AddShadowRectFilled(r1, r2, shadow_thickness, shadow_offset, ImGui::GetColorU32(shadow_color));
                 else
-                    draw_list->AddShadowRect(r1, r2, shadow_thickness, ImVec2(0.0f, 0.0f), ImGui::GetColorU32(shadow_color), shape_rounding);
-                draw_list->AddRectFilled(r1, r2, ImGui::GetColorU32(shape_color), shape_rounding);
+                    draw_list->AddShadowRect(r1, r2, shadow_thickness, shadow_offset, ImGui::GetColorU32(shadow_color), shape_rounding);
+                if (wireframe)
+                    draw_list->AddRect(r1, r2, ImGui::GetColorU32(shape_color), shape_rounding);
+                else
+                    draw_list->AddRectFilled(r1, r2, ImGui::GetColorU32(shape_color), shape_rounding);
                 ImGui::Dummy(ImVec2(200.0f, 200.0f));
             }
+
+            ImGui::SameLine();
+
+            // Circle
             {
                 ImVec2 p = ImGui::GetCursorScreenPos();
-                ImVec2 center(p.x + 100.0f, p.y + 100.0f);
-                float radius = 50.0f;
-                draw_list->AddRectFilled(p, ImVec2(p.x + 200.0f, p.y + 200.0f), ImGui::GetColorU32(bg_color));
+                float off = 10.0f;
+                ImVec2 r1(p.x + 50.0f + off, p.y + 50.0f + off);
+                ImVec2 r2(p.x + 150.0f - off, p.y + 150.0f - off);
+                ImVec2 c(p.x + 100.0f, p.y + 100.0f);
                 if (shadow_filled)
-                    draw_list->AddShadowCircleFilled(center, radius, shadow_thickness, ImVec2(0.0f, 0.0f), ImGui::GetColorU32(shadow_color), 0);
+                    draw_list->AddShadowCircleFilled(c, 50.0f, shadow_thickness, shadow_offset, ImGui::GetColorU32(shadow_color));
                 else
-                    draw_list->AddShadowCircle(center, radius, shadow_thickness, ImVec2(0.0f, 0.0f), ImGui::GetColorU32(shadow_color), 0);
-                draw_list->AddCircleFilled(center, radius, ImGui::GetColorU32(shape_color), 0);
+                    draw_list->AddShadowCircle(c, 50.0f, shadow_thickness, ImVec2(0.0f, 0.0f), ImGui::GetColorU32(shadow_color)); // Offset forced to zero here because it isn't supported
+                if (wireframe)
+                    draw_list->AddCircle(c, 50.0f, ImGui::GetColorU32(shape_color), 0);
+                else
+                    draw_list->AddCircleFilled(c, 50.0f, ImGui::GetColorU32(shape_color), 0);
                 ImGui::Dummy(ImVec2(200.0f, 200.0f));
             }
+
+            ImGui::SameLine();
+
+            // Convex shape
+            {
+                ImVec2 pos = ImGui::GetCursorScreenPos();
+
+                const ImVec2 poly_centre(pos.x + 50.0f, pos.y + 100.0f);
+                ImVec2* poly_points;
+                int num_poly_points;
+
+                switch (poly_shape_index)
+                {
+                default:
+                case 0:
+                {
+                    ImVec2 poly_point_data[] =
+                    {
+                        ImVec2(poly_centre.x - 32.0f, poly_centre.y),
+                        ImVec2(poly_centre.x - 24.0f, poly_centre.y + 24.0f),
+                        ImVec2(poly_centre.x, poly_centre.y + 32.0f),
+                        ImVec2(poly_centre.x + 24.0f, poly_centre.y + 24.0f),
+                        ImVec2(poly_centre.x + 32.0f, poly_centre.y),
+                        ImVec2(poly_centre.x + 24.0f, poly_centre.y - 24.0f),
+                        ImVec2(poly_centre.x, poly_centre.y - 32.0f),
+                        ImVec2(poly_centre.x - 32.0f, poly_centre.y - 32.0f)
+                    };
+                    poly_points = poly_point_data;
+                    num_poly_points = 8;
+                    break;
+                }
+                case 1:
+                {
+                    ImVec2 poly_point_data[] =
+                    {
+                        ImVec2(poly_centre.x + 40.0f, poly_centre.y - 20.0f),
+                        ImVec2(poly_centre.x, poly_centre.y + 32.0f),
+                        ImVec2(poly_centre.x - 24.0f, poly_centre.y - 32.0f)
+                    };
+                    poly_points = poly_point_data;
+                    num_poly_points = 3;
+                    break;
+                }
+                case 2:
+                {
+                    ImVec2 poly_point_data[] =
+                    {
+                        ImVec2(poly_centre.x - 32.0f, poly_centre.y),
+                        ImVec2(poly_centre.x, poly_centre.y + 32.0f),
+                        ImVec2(poly_centre.x + 32.0f, poly_centre.y),
+                        ImVec2(poly_centre.x, poly_centre.y - 32.0f)
+                    };
+                    poly_points = poly_point_data;
+                    num_poly_points = 4;
+                    break;
+                }
+                case 3:
+                {
+                    ImVec2 poly_point_data[] =
+                    {
+                        ImVec2(poly_centre.x - 4.0f, poly_centre.y - 20.0f),
+                        ImVec2(poly_centre.x + 12.0f, poly_centre.y + 2.0f),
+                        ImVec2(poly_centre.x + 8.0f, poly_centre.y + 16.0f),
+                        ImVec2(poly_centre.x, poly_centre.y + 32.0f),
+                        ImVec2(poly_centre.x - 16.0f, poly_centre.y - 32.0f)
+                    };
+                    poly_points = poly_point_data;
+                    num_poly_points = 5;
+                    break;
+                }
+                case 4: // Same as test case 3 but with reversed winding
+                {
+                    ImVec2 poly_point_data[] =
+                    {
+                        ImVec2(poly_centre.x - 16.0f, poly_centre.y - 32.0f),
+                        ImVec2(poly_centre.x, poly_centre.y + 32.0f),
+                        ImVec2(poly_centre.x + 8.0f, poly_centre.y + 16.0f),
+                        ImVec2(poly_centre.x + 12.0f, poly_centre.y + 2.0f),
+                        ImVec2(poly_centre.x - 4.0f, poly_centre.y - 20.0f)
+                    };
+                    poly_points = poly_point_data;
+                    num_poly_points = 5;
+                    break;
+                }
+                }
+
+                if (shadow_filled)
+                    draw_list->AddShadowConvexPolyFilled(poly_points, num_poly_points, shadow_thickness, shadow_offset, ImGui::GetColorU32(shadow_color));
+                else
+                    draw_list->AddShadowConvexPoly(poly_points, num_poly_points, shadow_thickness, ImVec2(0.0f, 0.0f), ImGui::GetColorU32(shadow_color)); // Offset forced to zero because it isn't supported
+
+                if (wireframe)
+                    draw_list->AddPolyline(poly_points, num_poly_points, ImGui::GetColorU32(shape_color), true, 1.0f);
+                else
+                    draw_list->AddConvexPolyFilled(poly_points, num_poly_points, ImGui::GetColorU32(shape_color));
+
+                ImGui::Dummy(ImVec2(200.0f, 200.0f));
+            }
+
+            draw_list->Flags = old_flags;
 
             ImGui::EndTabItem();
         }

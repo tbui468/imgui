@@ -229,97 +229,114 @@ void ImGui::ShowDemoWindow(bool* p_open)
     for (int pass = 0; pass < 2; pass++)
     {
         ImGui::PushID(pass);
-        ImGui::Text((pass == 0) ? "Normal" : "Log");
 
-        ImGuiDragSliderFlags flags = 0;
+        ImGuiSliderFlags slider_flags = (pass == 1) ? ImGuiSliderFlags_Logarithmic : ImGuiSliderFlags_None;
+        ImGuiDragFlags drag_flags = (pass == 1) ? ImGuiDragFlags_Logarithmic : ImGuiDragFlags_None;
 
-        if (pass == 1)
-            flags |= ImGuiDragSliderFlags_Logarithmic;
+        ImGui::Columns(2);
+        ImGui::Text((pass == 0) ? "Normal Slider" : "Log Slider");
+        ImGui::NextColumn();
+        ImGui::Text((pass == 0) ? "Normal Drag" : "Log Drag");
+        ImGui::NextColumn();
+
 
         {
             static float val = 0.001f;
-            ImGui::SliderFloat("Normal", &val, 0.001f, 100.0f, "%.3f", flags);
-            ImGui::SameLine();
-            ImGui::DragFloat("Normal drag", &val, 1.0f, 0.001f, 100.0f, "%.3f", flags);
+            ImGui::SliderFloat("Normal", &val, 0.001f, 100.0f, "%.3f", slider_flags);
+            ImGui::NextColumn();
+            ImGui::DragFloat("Normal drag", &val, 1.0f, 0.001f, 100.0f, "%.3f", drag_flags);
+            ImGui::NextColumn();
         }
 
         {
             static float val = 0.0f;
-            ImGui::SliderFloat("Normal from zero", &val, 0.0f, 100.0f, "%.3f", flags);
-            ImGui::SameLine();
-            ImGui::DragFloat("Normal from zero drag", &val, 1.0f, 0.0f, 100.0f, "%.3f", flags);
+            ImGui::SliderFloat("Normal from zero", &val, 0.0f, 100.0f, "%.3f", slider_flags);
+            ImGui::NextColumn();
+            ImGui::DragFloat("Normal from zero drag", &val, 1.0f, 0.0f, 100.0f, "%.3f", drag_flags);
+            ImGui::NextColumn();
         }
 
         {
             static float val = 0.0f;
-            ImGui::SliderFloat("Negative from zero", &val, -100.0f, 0.0f, "%.3f", flags);
-            ImGui::SameLine();
-            ImGui::DragFloat("Negative from zero drag", &val, 1.0f, -100.0f, 0.0f, "%.3f", flags);
+            ImGui::SliderFloat("Negative from zero", &val, -100.0f, 0.0f, "%.3f", slider_flags);
+            ImGui::NextColumn();
+            ImGui::DragFloat("Negative from zero drag", &val, 1.0f, -100.0f, 0.0f, "%.3f", drag_flags);
+            ImGui::NextColumn();
         }
 
         {
             static float val = 0.0f;
-            ImGui::SliderFloat("Negative to positive", &val, -100.0f, 100.0f, "%.3f", flags);
-            ImGui::SameLine();
-            ImGui::DragFloat("Negative to positive drag", &val, 1.0f, -100.0f, 100.0f, "%.3f", flags);
+            ImGui::SliderFloat("Negative to positive", &val, -100.0f, 100.0f, "%.3f", slider_flags);
+            ImGui::NextColumn();
+            ImGui::DragFloat("Negative to positive drag", &val, 1.0f, -100.0f, 100.0f, "%.3f", drag_flags);
+            ImGui::NextColumn();
         }
 
         {
             static float val = 0.0f;
-            ImGui::SliderFloat("Negative to positive offset", &val, -10.0f, 100.0f, "%.3f", flags);
-            ImGui::SameLine();
-            ImGui::DragFloat("Negative to positive offset drag", &val, 1.0f, -10.0f, 100.0f, "%.3f", flags);
+            ImGui::SliderFloat("Negative to positive offset", &val, -10.0f, 100.0f, "%.3f", slider_flags);
+            ImGui::NextColumn();
+            ImGui::DragFloat("Negative to positive offset drag", &val, 1.0f, -10.0f, 100.0f, "%.3f", drag_flags);
+            ImGui::NextColumn();
         }
 
         {
             static float val = 0.0f;
-            ImGui::SliderFloat("Normal from zero reverse", &val, 100.0f, 0.0f, "%.3f", flags);
-            ImGui::SameLine();
-            ImGui::DragFloat("Normal from zero reverse drag", &val, 1.0f, 100.0f, 0.0f, "%.3f", flags);
+            ImGui::SliderFloat("Normal from zero reverse", &val, 100.0f, 0.0f, "%.3f", slider_flags);
+            ImGui::NextColumn();
+            ImGui::DragFloat("Normal from zero reverse drag", &val, 1.0f, 100.0f, 0.0f, "%.3f", drag_flags);
+            ImGui::NextColumn();
         }
 
         {
             static float val = 0.0f;
-            ImGui::SliderFloat("Negative to positive reverse", &val, 100.0f, -100.0f, "%.3f", flags);
-            ImGui::SameLine();
-            ImGui::DragFloat("Negative to positive reverse drag", &val, 1.0f, 100.0f, -100.0f, "%.3f", flags);
+            ImGui::SliderFloat("Negative to positive reverse", &val, 100.0f, -100.0f, "%.3f", slider_flags);
+            ImGui::NextColumn();
+            ImGui::DragFloat("Negative to positive reverse drag", &val, 1.0f, 100.0f, -100.0f, "%.3f", drag_flags);
+            ImGui::NextColumn();
         }
 
         {
             static float val = 0.0f;
-            ImGui::SliderFloat("Huge", &val, 0.0f, 1000000.0f, "%.3f", flags);
-            ImGui::SameLine();
-            ImGui::DragFloat("Huge drag", &val, 10000.0f, 0.0f, 1000000.0f, "%.3f", flags);
+            ImGui::SliderFloat("Huge", &val, 0.0f, 1000000.0f, "%.3f", slider_flags);
+            ImGui::NextColumn();
+            ImGui::DragFloat("Huge drag", &val, 10000.0f, 0.0f, 1000000.0f, "%.3f", drag_flags);
+            ImGui::NextColumn();
         }
 
         {
             static float val = 0.0001f;
-            ImGui::SliderFloat("Tiny", &val, 0.0001f, 0.0004f, "%.8f", flags);
-            ImGui::SameLine();
-            ImGui::DragFloat("Tiny drag", &val, 0.00001f, 0.0001f, 0.0004f, "%.8f", flags);
+            ImGui::SliderFloat("Tiny", &val, 0.0001f, 0.0004f, "%.8f", slider_flags);
+            ImGui::NextColumn();
+            ImGui::DragFloat("Tiny drag", &val, 0.00001f, 0.0001f, 0.0004f, "%.8f", drag_flags);
+            ImGui::NextColumn();
         }
 
         {
             static float val = 0.0001f;
-            ImGui::SliderFloat("Tiny 2", &val, 0.0001f, 0.01f, "%.8f", flags);
-            ImGui::SameLine();
-            ImGui::DragFloat("Tiny 2 drag", &val, 0.00001f, 0.0001f, 0.01f, "%.8f", flags);
+            ImGui::SliderFloat("Tiny 2", &val, 0.0001f, 0.01f, "%.8f", slider_flags);
+            ImGui::NextColumn();
+            ImGui::DragFloat("Tiny 2 drag", &val, 0.00001f, 0.0001f, 0.01f, "%.8f", drag_flags);
+            ImGui::NextColumn();
         }
 
         {
             static float val = 10000.0f;
-            ImGui::SliderFloat("Offset", &val, 10000.0f, 10001.0f, "%.3f", flags);
-            ImGui::SameLine();
-            ImGui::DragFloat("Offset drag", &val, 0.001f, 10000.0f, 10001.0f, "%.3f", flags);
+            ImGui::SliderFloat("Offset", &val, 10000.0f, 10001.0f, "%.3f", slider_flags);
+            ImGui::NextColumn();
+            ImGui::DragFloat("Offset drag", &val, 0.001f, 10000.0f, 10001.0f, "%.3f", drag_flags);
+            ImGui::NextColumn();
         }
 
         {
             static float val = 10000.0f;
-            ImGui::SliderFloat("Offset 2", &val, 10000.0f, 20000.0f, "%.3f", flags);
-            ImGui::SameLine();
-            ImGui::DragFloat("Offset 2 drag", &val, 100.0f, 10000.0f, 20000.0f, "%.3f", flags);
+            ImGui::SliderFloat("Offset 2", &val, 10000.0f, 20000.0f, "%.3f", slider_flags);
+            ImGui::NextColumn();
+            ImGui::DragFloat("Offset 2 drag", &val, 100.0f, 10000.0f, 20000.0f, "%.3f", drag_flags);
+            ImGui::NextColumn();
         }
 
+        ImGui::Columns(1);
         ImGui::PopID();
     }
 
